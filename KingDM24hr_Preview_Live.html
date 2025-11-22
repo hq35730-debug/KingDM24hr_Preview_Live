@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KingDM24hr — Advanced Preview</title>
+
+  <style>
+    :root{
+      --bg:#071022; --panel:#0e1720; --accent:#28a7ff; --accent-2:#ff6b9a; --muted:#93a5b8;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;color:#e6f0ff;background:linear-gradient(180deg,#071022 0%, #03111a 100%);min-height:100vh}
+    header{display:flex;align-items:center;gap:16px;padding:14px 20px;background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-bottom:1px solid rgba(255,255,255,0.02)}
+    .logo{font-weight:700;color:var(--accent);font-size:18px;letter-spacing:0.6px}
+    .top-actions{margin-left:auto;display:flex;gap:10px;align-items:center}
+    .btn{background:linear-gradient(90deg,var(--accent),#0b7de6);border:none;padding:8px 12px;border-radius:8px;color:white;cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+    main{display:flex;gap:18px;padding:18px;align-items:flex-start}
+    /* left column: stream */
+    .left{flex:1;min-width:420px;display:flex;flex-direction:column;gap:12px}
+    .video-wrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.03);background:linear-gradient(180deg,#04111a,#09202b);height:520px;display:flex;flex-direction:column}
+    .video-top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:linear-gradient(180deg, rgba(0,0,0,0.12), transparent)}
+    .live-badge{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,#ff385d,#ff8ab0);padding:6px 10px;border-radius:999px;color:white;font-weight:700}
+    .host-info{display:flex;gap:12px;align-items:center}
+    .host-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(90deg,#1b6cff,#7bd1ff);display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
+    .video-canvas{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative}
+    .video-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative}
+    /* pulsing "camera" effect */
+    .camera {
+      width:76%;
+      height:76%;
+      border-radius:10px;
+      background:linear-gradient(135deg,#0f1d2b,#0b2c3d);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6) inset;
+      position:relative;
+      overflow:hidden;
+      display:flex;align-items:center;justify-content:center;color:#9fd8ff;
+      font-size:20px;
+    }
+    .camera::after{
+      content:'LIVE PREVIEW';
+      position:absolute;top:12px;left:12px;color:#9fd8ff;font-weight:700;font-size:13px;
+    }
+    .camera .pulse{
+      position:absolute;width:18px;height:18px;border-radius:50%;background:#ff3b6e;right:12px;top:12px;box-shadow:0 0 18px rgba(255,59,110,0.8);
+      animation: pulse 1.6s infinite;
+    }
+    @keyframes pulse{0%{transform:scale(1);opacity:1}70%{transform:scale(2.2);opacity:0}100%{opacity:0}}
+    /* hearts layer */
+    .hearts{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:hidden}
+    .heart{position:absolute;width:28px;height:28px;border-radius:6px;background:linear-gradient(180deg,#ff6b9a,#ff3b6e);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;transform:translateY(0) scale(1);animation: floatUp 2.2s forwards}
+    @keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-240px) scale(1.25)}}
+
+    /* small overlay controls on video */
+    .video-controls{position:absolute;right:14px;bottom:14px;display:flex;gap:8px}
+    .small-btn{background:rgba(0,0,0,0.45);border-radius:10px;padding:8px 10px;color:white;border:1px solid rgba(255,255,255,0.04);font-weight:600;cursor:pointer}
+
+    /* floating gift animation */
+    .gift-anim{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);pointer-events:none}
+    .gift-fly{display:inline-block;padding:8px 12px;border-radius:999px;background:linear-gradient(90deg,#ffd16b,#ff7ab6);color:#001;box-shadow:0 8px 30px rgba(255,122,166,0.18);animation:flyUp 1.6s ease forwards}
+    @keyframes flyUp{0%{opacity:0;transform:translateY(20px) scale(0.8)}10%{opacity:1}100%{opacity:0;transform:translateY(-220px) scale(1.2)}}
+
+    /* right column: chat and controls */
+    .right{width:420px;display:flex;flex-direction:column;gap:12px}
+    .panel{background:var(--panel);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.02)}
+    .chat{height:360px;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:8px}
+    .chat .msg{padding:8px 10px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01)) ;border:1px solid rgba(255,255,255,0.02);font-size:14px}
+    .out-msg{align-self:flex-end;background:linear-gradient(90deg,#0b73ff,#005ec7);color:white}
+    .controls{display:flex;gap:10px;flex-wrap:wrap}
+    .wallet{display:flex;align-items:center;gap:10px;justify-content:space-between}
+    .wallet .bal{font-weight:800;color:var(--accent)}
+
+    /* host control panel specifics */
+    .host-controls{display:flex;gap:8px;flex-wrap:wrap}
+    .danger{background:linear-gradient(90deg,#ff4d4d,#ff7a7a);color:white}
+
+    /* bottom nav */
+    .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:8px 12px;border-radius:999px;display:flex;gap:12px;border:1px solid rgba(255,255,255,0.03)}
+    .nav-item{padding:10px 14px;border-radius:10px;cursor:pointer;color:var(--muted)}
+    .nav-item.active{background:linear-gradient(90deg,#082a41,#083755);color:var(--accent)}
+
+    /* event feed */
+    .feed{height:150px;overflow:auto;font-size:13px;color:var(--muted)}
+
+    /* co-host box */
+    .cohost-box{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;background:linear-gradient(90deg,#03121a,#07202a)}
+    .cohost-avatar{width:60px;height:48px;border-radius:10px;background:linear-gradient(90deg,#18d6a3,#1b9dff);display:flex;align-items:center;justify-content:center;font-weight:700;color:white}
+
+    /* small helpers */
+    .muted-pill{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);color:var(--muted);font-weight:700}
+    .label{font-size:12px;color:var(--muted)}
+    footer{height:60px}
+    @media(max-width:980px){main{flex-direction:column}.right{width:100%}.left{min-width:unset}}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">KingDM24hr</div>
+  <div class="label">Preview / Demo</div>
+  <div class="top-actions">
+    <button id="modeBtn" class="btn">Switch to Host Mode</button>
+    <button id="resetBtn" class="btn ghost">Reset Wallet</button>
+  </div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="video-wrap" id="videoWrap">
+      <div class="video-top">
+        <div class="host-info">
+          <div class="host-avatar" id="hostAvatar">ML</div>
+          <div>
+            <div style="font-weight:800">My Lord</div>
+            <div style="font-size:13px;color:var(--muted)">Streaming to KingDM24hr Preview</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="live-badge" id="liveBadge"><div style="width:8px;height:8px;border-radius:50%;background:white"></div> LIVE</div>
+          <div class="muted-pill" id="micStatus">Mic: ON</div>
+        </div>
+      </div>
+
+      <div class="video-canvas" id="videoCanvas">
+        <div class="video-placeholder">
+          <div class="camera" id="camera">
+            <div class="pulse"></div>
+            <!-- animated gradient content -->
+            <svg width="220" height="100" viewBox="0 0 220 100" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="g" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#1b6cff"/>
+                  <stop offset="100%" stop-color="#7bd1ff"/>
+                </linearGradient>
+              </defs>
+              <rect width="220" height="100" rx="8" fill="url(#g)" opacity="0.06"></rect>
+              <g fill="white" opacity="0.85" font-family="Arial, sans-serif">
+                <text x="110" y="58" font-size="22" text-anchor="middle">KingDM24hr Preview</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="hearts" id="hearts"></div>
+        <div class="gift-anim" id="giftAnim" aria-hidden="true"></div>
+
+        <div class="video-controls">
+          <button class="small-btn" id="likeBtn">❤ Like</button>
+          <button class="small-btn" id="toggleMic">Mute</button>
+          <button class="small-btn" id="endStreamBtn">End</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;padding:12px;align-items:center;justify-content:space-between">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="label">Viewers</div>
+          <div id="viewerCount" style="font-weight:900;color:var(--accent)">0</div>
+        </div>
+        <div class="label">Stream uptime: <span id="uptime">0s</span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="flex:1" class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:800">Host Control Panel</div>
+          <div class="label">Actions</div>
+        </div>
+
+        <div class="host-controls">
+          <button class="btn" id="btnMuteViewer">Mute Viewer</button>
+          <button class="btn danger" id="btnKickViewer">Kick Viewer</button>
+          <button class="btn" id="btnSlowMode">Toggle Slow Mode</button>
+          <button class="btn ghost" id="btnCoHost">Invite Co-Host</button>
+        </div>
+
+        <div style="margin-top:10px" class="feed" id="eventFeed">
+          <!-- events -->
+        </div>
+      </div>
+
+      <div style="width:260px" class="panel">
+        <div style="font-weight:800;margin-bottom:8px">Co-Host</div>
+        <div class="cohost-box" id="cohostBox">
+          <div class="cohost-avatar" id="cohostAvatar">GH</div>
+          <div>
+            <div style="font-weight:800" id="cohostName">Guest Host</div>
+            <div class="label" id="cohostStatus">Not connected</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px" class="label">Stream Health</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <div style="flex:1;background:linear-gradient(90deg,#042435,#053548);padding:8px;border-radius:8px;text-align:center">
+            <div style="font-weight:800" id="rtt">RTT: 12ms</div>
+            <div class="label">Latency</div>
+          </div>
+          <div style="flex:1;background:linear-gradient(90deg,#042435,#053548);padding:8px;border-radius:8px;text-align:center">
+            <div style="font-weight:800" id="ploss">PktLoss: 0%</div>
+            <div class="label">Packet Loss</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <aside class="right">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:900">Chat</div>
+        <div class="label">Live Room</div>
+      </div>
+      <div class="chat" id="chatBox"></div>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input id="chatInput" type="text" placeholder="Say something..." style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:white"/>
+        <button class="btn" id="sendChat">Send</button>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <div style="flex:1">
+          <div class="label">Gift</div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <button class="btn" data-gift="100" onclick="uiSendGift(100)">💝 100</button>
+            <button class="btn" data-gift="500" onclick="uiSendGift(500)">💎 500</button>
+            <button class="btn" data-gift="1000" onclick="uiSendGift(1000)">👑 1000</button>
+          </div>
+        </div>
+        <div style="width:160px">
+          <div class="label">Wallet</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+            <div>Balance</div>
+            <div class="bal" id="walletBal">1,500</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:900">Event Feed</div>
+        <div class="label">Recent</div>
+      </div>
+      <div class="feed" id="feedBox"></div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:900">Controls</div>
+        <div class="label">Preview Settings</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <label class="label" style="width:75px">Auto Hearts</label>
+        <input type="checkbox" id="autoHearts" checked/>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <label class="label" style="width:75px">Auto Joins</label>
+        <input type="checkbox" id="autoJoin" />
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label class="label" style="width:75px">Sound</label>
+        <input type="checkbox" id="soundToggle" />
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="bottom-nav" role="navigation">
+  <div class="nav-item active">Home</div>
+  <div class="nav-item">Streams</div>
+  <div class="nav-item">Wallet</div>
+  <div class="nav-item">Profile</div>
+</div>
+
+<footer></footer>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<script>
+/*
+ KingDM24hr Advanced Preview — Frontend-only simulation
+ Features:
+ - Host/Viewer toggle
+ - Animated fake video (pulse)
+ - Floating hearts on click or auto
+ - Gift animations + wallet deduction
+ - Event feed (joins, gifts, kicks)
+ - Host controls (mute/kick/slow mode/co-host)
+ - Simulated co-host connection
+ - Stream health metrics simulation
+*/
+
+(() => {
+  // state
+  let mode = 'viewer'; // 'host' or 'viewer'
+  let viewerCount = 0;
+  let wallet = Number(localStorage.getItem('kingdm_wallet') || 1500);
+  let uptimeSec = 0;
+  let uptimeInterval = null;
+  let autoHeartsTimer = null;
+  let autoJoinTimer = null;
+  let slowMode = false;
+  let lastChatTimestamp = 0;
+  const chatBox = document.getElementById('chatBox');
+  const feedBox = document.getElementById('feedBox');
+  const eventFeed = document.getElementById('eventFeed');
+  const heartsLayer = document.getElementById('hearts');
+  const giftAnimArea = document.getElementById('giftAnim');
+  const viewerCountEl = document.getElementById('viewerCount');
+  const walletBalEl = document.getElementById('walletBal');
+  const liveBadge = document.getElementById('liveBadge');
+  const micStatus = document.getElementById('micStatus');
+  const cohostStatus = document.getElementById('cohostStatus');
+  const cohostName = document.getElementById('cohostName');
+  const cohostAvatar = document.getElementById('cohostAvatar');
+  const rttEl = document.getElementById('rtt');
+  const pLossEl = document.getElementById('ploss');
+  const uptimeEl = document.getElementById('uptime');
+
+  // initialize UI
+  walletBalEl.textContent = wallet.toLocaleString();
+  updateViewerCount();
+
+  // element refs
+  const modeBtn = document.getElementById('modeBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const sendChat = document.getElementById('sendChat');
+  const chatInput = document.getElementById('chatInput');
+  const likeBtn = document.getElementById('likeBtn');
+  const toggleMic = document.getElementById('toggleMic');
+  const endStreamBtn = document.getElementById('endStreamBtn');
+  const btnMuteViewer = document.getElementById('btnMuteViewer');
+  const btnKickViewer = document.getElementById('btnKickViewer');
+  const btnCoHost = document.getElementById('btnCoHost');
+  const btnSlowMode = document.getElementById('btnSlowMode');
+  const autoHearts = document.getElementById('autoHearts');
+  const autoJoin = document.getElementById('autoJoin');
+  const soundToggle = document.getElementById('soundToggle');
+
+  // sounds (commented/optional)
+  const soundEnabled = () => soundToggle.checked;
+  const playSound = (name) => {
+    if(!soundEnabled()) return;
+    // placeholder: tiny beep using WebAudio
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.value = (name==='gift')?880:440;
+      o.connect(g); g.connect(ctx.destination);
+      o.start();
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      o.stop(ctx.currentTime + 0.2);
+    } catch(e){}
+  };
+
+  // helper: add chat message
+  function addChat(author, text, type='in') {
+    const d = document.createElement('div');
+    d.className = 'msg ' + (type==='out' ? 'out-msg':'' );
+    d.innerHTML = `<strong style="display:block;font-size:13px">${author}</strong><span style="opacity:0.92">${escapeHtml(text)}</span>`;
+    chatBox.appendChild(d);
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function addFeed(text) {
+    const item = document.createElement('div');
+    item.style.padding = '8px 6px';
+    item.style.borderBottom = '1px dashed rgba(255,255,255,0.02)';
+    item.innerHTML = `<div style="font-size:13px;color:var(--muted)">${new Date().toLocaleTimeString()}</div><div style="font-weight:700;margin-top:4px">${escapeHtml(text)}</div>`;
+    feedBox.prepend(item);
+    // keep feed reasonable size
+    if(feedBox.children.length > 80) feedBox.removeChild(feedBox.lastChild);
+  }
+
+  function addEvent(text) {
+    const it = document.createElement('div');
+    it.style.padding = '8px 6px';
+    it.innerHTML = `<div style="font-size:12px;color:var(--muted)">${new Date().toLocaleTimeString()}</div><div style="font-weight:700">${escapeHtml(text)}</div>`;
+    eventFeed.prepend(it);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  }
+
+  // hearts
+  function spawnHeart(xPercent) {
+    const heart = document.createElement('div');
+    heart.className = 'heart';
+    heart.style.left = (typeof xPercent === 'number' ? xPercent : (40 + Math.random()*40)) + '%';
+    heart.style.bottom = (10 + Math.random()*6) + 'px';
+    heart.style.background = `linear-gradient(180deg, ${randomColor()}, ${randomColor(true)})`;
+    heartsLayer.appendChild(heart);
+    setTimeout(()=>heart.remove(), 2500);
+  }
+  function randomColor(late=false){
+    if(late) return '#ff6b9a';
+    const colors=['#ff6b9a','#ff8a4d','#ffbb3b','#7bd1ff','#8cf58c'];
+    return colors[Math.floor(Math.random()*colors.length)];
+  }
+
+  // gift animation
+  function showGiftAnimation(amount) {
+    const el = document.createElement('div');
+    el.className = 'gift-fly';
+    el.textContent = `+ ${amount}`;
+    giftAnimArea.appendChild(el);
+    playSound('gift');
+    setTimeout(()=>el.remove(), 1600);
+  }
+
+  // UI interactions
+  modeBtn.addEventListener('click', ()=> {
+    mode = (mode==='viewer') ? 'host' : 'viewer';
+    modeBtn.textContent = mode==='host' ? 'Switch to Viewer Mode' : 'Switch to Host Mode';
+    addEvent(mode==='host' ? 'Switched to Host Mode' : 'Switched to Viewer Mode');
+    // Host toggles: enable host UI or not
+    if(mode==='host') {
+      // host start: start uptime
+      startUptime();
+      liveBadge.style.display = 'inline-flex';
+      cohostStatus.textContent = 'Not connected';
+    } else {
+      // viewer: maybe join
+      stopUptime();
+      liveBadge.style.display = 'inline-flex';
+    }
+  });
+
+  resetBtn.addEventListener('click', ()=> {
+    wallet = 1500;
+    localStorage.setItem('kingdm_wallet', wallet);
+    walletBalEl.textContent = wallet.toLocaleString();
+    addFeed('Wallet reset to 1,500 (demo)');
+  });
+
+  sendChat.addEventListener('click', ()=> {
+    const text = chatInput.value.trim();
+    if(!text) return;
+    if(slowMode && Date.now() - lastChatTimestamp < 5000) {
+      addFeed('Slow mode: you are sending messages too quickly.');
+      return;
+    }
+    addChat('You', text, 'out');
+    addFeed(`You: ${text}`);
+    // mirror to host with slight delay
+    setTimeout(()=> addChat('Host', `Reply to: ${text}`), 600);
+    chatInput.value = '';
+    lastChatTimestamp = Date.now();
+  });
+
+  chatInput.addEventListener('keydown', (e)=> { if(e.key==='Enter') sendChat.click(); });
+
+  likeBtn.addEventListener('click', ()=> {
+    spawnHeart(70 + Math.random()*20);
+    addFeed('You liked the stream ❤');
+  });
+
+  document.getElementById('videoCanvas').addEventListener('click', (e)=>{
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    spawnHeart(x);
+    addFeed('You tapped the video');
+  });
+
+  toggleMic.addEventListener('click', ()=> {
+    const isOn = micStatus.textContent.includes('ON');
+    micStatus.textContent = isOn ? 'Mic: OFF' : 'Mic: ON';
+    toggleMic.textContent = isOn ? 'Unmute' : 'Mute';
+    addEvent(isOn ? 'Microphone muted' : 'Microphone unmuted');
+  });
+
+  endStreamBtn.addEventListener('click', ()=> {
+    addEvent('Stream ended (demo)');
+    stopUptime();
+    liveBadge.style.display = 'none';
+    // clear viewers
+    viewerCount = 0;
+    updateViewerCount();
+  });
+
+  // host controls
+  btnMuteViewer.addEventListener('click', ()=> {
+    addEvent('Host muted a viewer (demo)');
+    addFeed('Host action: Muted viewer');
+  });
+
+  btnKickViewer.addEventListener('click', ()=> {
+    if(viewerCount<=0){ addFeed('No viewers to kick'); return; }
+    viewerCount = Math.max(0, viewerCount-1);
+    updateViewerCount();
+    addEvent('Host kicked a viewer (demo)');
+    addFeed('Host action: Kicked a viewer');
+  });
+
+  btnCoHost.addEventListener('click', ()=> {
+    connectCoHost();
+  });
+
+  btnSlowMode.addEventListener('click', ()=> {
+    slowMode = !slowMode;
+    btnSlowMode.textContent = slowMode ? 'Disable Slow Mode' : 'Toggle Slow Mode';
+    addEvent(`Slow mode ${slowMode ? 'enabled' : 'disabled'}`);
+  });
+
+  // fake join behavior
+  function simulateJoin(){
+    viewerCount++;
+    updateViewerCount();
+    addFeed('A viewer joined');
+    addEvent('Viewer joined the stream');
+  }
+  function simulateLeave(){
+    viewerCount = Math.max(0, viewerCount-1);
+    updateViewerCount();
+    addFeed('A viewer left');
+    addEvent('Viewer left');
+  }
+
+  // auto behaviors
+  autoHearts.addEventListener('change', ()=> {
+    if(autoHearts.checked) startAutoHearts(); else stopAutoHearts();
+  });
+
+  autoJoin.addEventListener('change', ()=> {
+    if(autoJoin.checked) startAutoJoins(); else stopAutoJoins();
+  });
+
+  function startAutoHearts(){
+    stopAutoHearts();
+    autoHeartsTimer = setInterval(()=> {
+      spawnHeart(20 + Math.random()*60);
+    }, 900);
+  }
+  function stopAutoHearts(){ if(autoHeartsTimer) clearInterval(autoHeartsTimer); autoHeartsTimer = null; }
+
+  function startAutoJoins(){
+    stopAutoJoins();
+    autoJoinTimer = setInterval(()=> {
+      if(Math.random() < 0.6) simulateJoin(); else simulateLeave();
+    }, 3500);
+  }
+  function stopAutoJoins(){ if(autoJoinTimer) clearInterval(autoJoinTimer); autoJoinTimer = null; }
+
+  // initial auto hearts
+  if(autoHearts.checked) startAutoHearts();
+
+  // wallet & gift logic
+  window.uiSendGift = function(amount){
+    if(wallet < amount){
+      addFeed('Insufficient balance — demo wallet');
+      return;
+    }
+    wallet -= amount;
+    localStorage.setItem('kingdm_wallet', wallet);
+    walletBalEl.textContent = wallet.toLocaleString();
+    addChat('You', `Sent gift ${amount}`, 'out');
+    addFeed(`You sent a gift: ${amount}`);
+    // animate flying gift
+    showGiftAnimation(amount);
+    // increment host coins/viewer reaction
+    spawnHeart(50 + Math.random()*20);
+    // play sound
+    playSound('gift');
+  };
+
+  function showGiftAnimation(amount){
+    const el = document.createElement('div');
+    el.className = 'gift-fly';
+    el.style.fontWeight = '800';
+    el.style.padding = '10px 16px';
+    el.textContent = `+ ${amount} Coins`;
+    giftAnimArea.appendChild(el);
+    setTimeout(()=> el.remove(), 1500);
+  }
+
+  // show a gift from remote (simulate)
+  function remoteGift(amount, from='Viewer') {
+    addChat(from, `Sent gift ${amount}`);
+    addFeed(`${from} sent a gift: ${amount}`);
+    showGiftAnimation(amount);
+    spawnHeart(30 + Math.random()*40);
+  }
+
+  // co-host simulation
+  function connectCoHost(){
+    cohostStatus.textContent = 'Connecting...';
+    addFeed('Inviting co-host...');
+    setTimeout(()=>{
+      cohostStatus.textContent = 'Live as co-host';
+      cohostName.textContent = 'Guest Host';
+      cohostAvatar.textContent = 'GH';
+      addFeed('Guest Host joined as co-host');
+    }, 1200);
+  }
+
+  // simulate stream health metrics
+  setInterval(()=> {
+    const rtt = Math.max(10, Math.round(30 + Math.random()*50));
+    const pLoss = Math.round(Math.random()*6);
+    rttEl.textContent = `RTT: ${rtt}ms`;
+    pLossEl.textContent = `PktLoss: ${pLoss}%`;
+    // degrade alarm
+    if(pLoss > 3) addEvent('Stream packet loss detected: ' + pLoss + '%');
+  }, 4000);
+
+  // uptime
+  function startUptime(){
+    if(uptimeInterval) clearInterval(uptimeInterval);
+    uptimeInterval = setInterval(()=> {
+      uptimeSec++;
+      const s = uptimeSec % 60;
+      const m = Math.floor(uptimeSec/60) % 60;
+      const h = Math.floor(uptimeSec/3600);
+      uptimeEl.textContent = `${h}h ${m}m ${s}s`;
+    }, 1000);
+  }
+  function stopUptime(){ if(uptimeInterval) clearInterval(uptimeInterval); uptimeInterval = null; uptimeSec = 0; uptimeEl.textContent = '0s'; }
+
+  // viewer count display
+  function updateViewerCount(){
+    viewerCountEl.textContent = viewerCount;
+  }
+
+  // keyboard shortcuts (H = host/viewer toggle, G = gift 100, J = join)
+  window.addEventListener('keydown', (e) => {
+    if(e.key.toLowerCase()==='h') modeBtn.click();
+    if(e.key.toLowerCase()==='g') uiSendGift(100);
+    if(e.key.toLowerCase()==='j') simulateJoin();
+  });
+
+  // small pre-seeded chat
+  addChat('Host', 'Welcome to the KingDM24hr preview! Try gifts and hearts — everything is simulated.', 'in');
+  addChat('Viewer1', 'Nice preview!', 'in');
+  addFeed('Preview initialized');
+
+  // expose some controls for dev/debug
+  window.KingDM = {
+    spawnHeart, remoteGift, simulateJoin, simulateLeave, uiSendGift
+  };
+
+  // compatibility: ensure auto join if set
+  if(autoJoin.checked) startAutoJoins();
+
+  // clean up on unload (stop timers)
+  window.addEventListener('beforeunload', ()=> {
+    stopAutoHearts(); stopAutoJoins(); stopUptime();
+  });
+
+})();
+/*********************************************
+ * BACKEND SIGNALING SETUP (Add this at bottom)
+ *********************************************/
+const socket = io("http://localhost:4000", {
+  transports: ["websocket"],
+});
+
+socket.on("connect", () => {
+  console.log("🔌 Connected to backend:", socket.id);
+});
+
+/************************************************
+ * JOIN ROOM WHEN HOST OR VIEWER MODE ACTIVATES
+ ************************************************/
+function connectToBackend(roomId, role) {
+  socket.emit("joinRoom", { roomId, role }, (res) => {
+    if (!res.ok) {
+      console.error("Join room failed:", res.error);
+      return;
+    }
+    console.log("Joined room:", roomId, role);
+
+    // store router capabilities for mediasoup
+    window.routerCaps = res.routerRtpCapabilities;
+  });
+}
+
+/*************************************
+ * ADD BACKEND HOOKS TO EXISTING UI
+ *************************************/
+function setMode(mode) {
+  if (mode === "host") {
+    hostPanel.classList.remove("hidden");
+    viewerPanel.classList.add("hidden");
+
+    // connect host
+    connectToBackend("demo-room", "host");
+
+  } else {
+    viewerPanel.classList.remove("hidden");
+    hostPanel.classList.add("hidden");
+
+    // connect viewer
+    connectToBackend("demo-room", "viewer");
+  }
+}
+
+/*****************************************************
+ * REAL CHAT: Replace simulated messages with backend
+ *****************************************************/
+socket.on("chatMessage", (data) => {
+  appendMessage("viewerChat", data.user + ": " + data.message);
+  appendMessage("hostChat", data.user + ": " + data.message);
+});
+
+/*****************************************
+ * REAL GIFTS
+ *****************************************/
+socket.on("gift", ({ user, amount }) => {
+  appendMessage("hostChat", `🎁 ${user} sent ${amount}`);
+  appendMessage("viewerChat", `🎁 ${user} sent ${amount}`);
+});
+
+/*****************************************
+ * USER JOIN EVENTS
+ *****************************************/
+socket.on("event", (e) => {
+  if (e.type === "join") {
+    appendMessage("hostChat", `🔵 ${e.user} joined the stream`);
+  }
+});
+
+/*****************************************
+ * USER KICKED
+ *****************************************/
+socket.on("kicked", () => {
+  alert("You were kicked from the stream by the host.");
+});
+
+/*****************************************
+ * STREAM END
+ *****************************************/
+socket.on("endStream", () => {
+  alert("Stream ended by host.");
+});
+</script>
+
+<!-- Add this near the end of the preview HTML (before </body>) -->
+<script type="module">
+/*
+  Live mediasoup client (preview -> backend signaling)
+  - Requires: backend Socket.IO at http://<HOST>:4000 namespace /signal
+  - CDN imports used for quick demo. For production, npm install and bundle.
+*/
+
+import * as mediasoupClient from 'https://cdn.skypack.dev/mediasoup-client@3.11.5';
+// socket.io client (global "io")
+import 'https://cdn.socket.io/4.7.2/socket.io.min.js';
+
+const SIGNALING_URL = (location.hostname === 'localhost' ? 'http://localhost:4000' : `${location.protocol}//${location.host.replace(/:\\d+$/,'')}:4000`);
+const NAMESPACE = '/signal';
+const socket = io(SIGNALING_URL + NAMESPACE, { transports: ['websocket'], autoConnect: false });
+
+// UI hooks (adjust IDs if your preview uses different element ids)
+const localPreview = document.getElementById('camera');      // host preview container
+const remoteContainer = document.getElementById('videoCanvas'); // where remote <video> elements will be attached
+const modeBtn = document.getElementById('modeBtn'); // toggles host/viewer
+
+// mediasoup Device
+let device = null;
+let sendTransport = null;
+let recvTransport = null;
+let producer = null;
+const consumers = new Map(); // consumerId -> { consumer, el }
+
+// ICE servers (optionally provided by backend via /api/ice or env)
+let ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]; // fallback
+
+// Helper: ask backend for ICE servers when connecting (optional)
+async function fetchIceServers() {
+  try {
+    const r = await fetch('/api/ice'); // optional endpoint your backend can serve
+    if (r.ok) {
+      const j = await r.json();
+      if (j.iceServers) ICE_SERVERS = j.iceServers;
+    }
+  } catch (e) {
+    // ignore - keep fallback
+  }
+}
+
+// Connect socket (authenticate if needed)
+// If your backend expects a service token or auth token, pass it via auth: { token: '...' }
+function connectSocket(authToken = null) {
+  if (authToken) socket.io.opts.auth = { token: authToken };
+  socket.connect();
+  socket.on('connect', () => console.log('signaling connected', socket.id));
+  socket.on('disconnect', () => console.warn('signaling disconnected'));
+  // events from server: new producers available
+  socket.on('new-producer', ({ producerId, userId, metadata }) => {
+    console.log('new producer announced', producerId);
+    // attempt to consume it if in viewer mode
+    if (isViewerMode()) consumeProducer(producerId, metadata).catch(console.error);
+  });
+  // other server events: gift, chat, etc. (preview already handled those)
+}
+
+// Utility: whether preview in viewer mode (uses your UI state)
+function isViewerMode() {
+  return modeBtn && modeBtn.textContent && modeBtn.textContent.toLowerCase().includes('viewer');
+}
+
+/* -----------------------------
+   HOST: start producing to SFU
+   -----------------------------
+   Flow:
+    1) getUserMedia()
+    2) create mediasoup Device from server routerRtpCapabilities
+    3) ask server to create WebRtcTransport (server side uses router.createWebRtcTransport)
+    4) create sendTransport in mediasoup-client using server data
+    5) call sendTransport.produce({ track })
+    6) server stores producer and emits to other viewers
+*/
+
+// Call when host clicks "Go Live" (or switches to Host Mode)
+async function startProducer() {
+  if (!socket.connected) connectSocket();
+
+  await fetchIceServers();
+
+  // 1) get local media
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { width: 1280, height: 720 } });
+  } catch (e) {
+    console.error('getUserMedia failed', e);
+    alert('Camera/Microphone access denied');
+    return;
+  }
+
+  // attach preview to localPreview container (replace existing content)
+  localPreview.innerHTML = '';
+  const smallVid = document.createElement('video');
+  smallVid.autoplay = true; smallVid.muted = true; smallVid.playsInline = true;
+  smallVid.srcObject = stream;
+  localPreview.appendChild(smallVid);
+
+  // 2) exchange RTP capabilities: ask server for router rtpCapabilities
+  const r0 = await emitRequest('getRouterRtpCapabilities', {});
+  const routerRtpCapabilities = r0.routerRtpCapabilities;
+  device = new mediasoupClient.Device();
+  await device.load({ routerRtpCapabilities });
+
+  // 3) ask server to create WebRtcTransport for sending
+  const sendTransportOptions = await emitRequest('createTransport', { producing: true });
+  // create mediasoup send transport
+  sendTransport = device.createSendTransport({
+    id: sendTransportOptions.id,
+    iceParameters: sendTransportOptions.iceParameters,
+    iceCandidates: sendTransportOptions.iceCandidates,
+    dtlsParameters: sendTransportOptions.dtlsParameters,
+    // NOTE: set proprietary options or appData if you want
+  });
+
+  // transport event handlers
+  sendTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+    try {
+      await emitRequest('connectTransport', { transportId: sendTransport.id, dtlsParameters });
+      callback();
+    } catch (e) {
+      console.error('connect transport failed', e);
+      errback(e);
+    }
+  });
+
+  sendTransport.on('produce', async ({ kind, rtpParameters }, callback, errback) => {
+    try {
+      const res = await emitRequest('produce', { transportId: sendTransport.id, kind, rtpParameters, appData: { demo: true } });
+      callback({ id: res.producerId });
+    } catch (e) {
+      console.error('produce failed', e);
+      errback(e);
+    }
+  });
+
+  // actually produce tracks
+  const videoTrack = stream.getVideoTracks()[0];
+  const audioTrack = stream.getAudioTracks()[0];
+
+  try {
+    if (videoTrack) {
+      producer = await sendTransport.produce({ track: videoTrack, appData: { media: 'video' } });
+      console.log('produced video', producer.id);
+    }
+    if (audioTrack) {
+      const audioProducer = await sendTransport.produce({ track: audioTrack, appData: { media: 'audio' } });
+      console.log('produced audio', audioProducer.id);
+    }
+    // notify server we are live (server should already have the producer via produce handler)
+    addFeed('You started broadcasting (host).');
+  } catch (e) {
+    console.error('produce error', e);
+  }
+}
+
+/* -----------------------------
+   VIEWER: consume producers
+   -----------------------------
+   Flow:
+    1) create mediasoup Device from server routerRtpCapabilities (if not already)
+    2) create WebRtcTransport for consumer
+    3) ask server to create a consumer for a specific producerId
+    4) call transport.consume() -> gives Consumer with remote track
+    5) attach remote track into a <video> element and play
+*/
+
+// create or ensure Device loaded
+async function ensureDevice() {
+  if (device && device.loaded) return;
+  const r = await emitRequest('getRouterRtpCapabilities', {});
+  device = new mediasoupClient.Device();
+  await device.load({ routerRtpCapabilities: r.routerRtpCapabilities });
+}
+
+// call to consume a producer (pass producerId provided by server)
+async function consumeProducer(producerId, metadata = {}) {
+  if (!socket.connected) connectSocket();
+  await fetchIceServers();
+  await ensureDevice();
+
+  // 1) ask server for a recv transport
+  const recvTransportOptions = await emitRequest('createTransport', { producing: false });
+  recvTransport = device.createRecvTransport({
+    id: recvTransportOptions.id,
+    iceParameters: recvTransportOptions.iceParameters,
+    iceCandidates: recvTransportOptions.iceCandidates,
+    dtlsParameters: recvTransportOptions.dtlsParameters,
+  });
+
+  recvTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
+    try {
+      await emitRequest('connectTransport', { transportId: recvTransport.id, dtlsParameters });
+      callback();
+    } catch (e) {
+      console.error('recv connect failed', e);
+      errback(e);
+    }
+  });
+
+  // 2) ask server to createConsumer (server will call router.consume and return consumerParameters)
+  const consumerInfo = await emitRequest('consume', { transportId: recvTransport.id, producerId, rtpCapabilities: device.rtpCapabilities });
+  // 3) create consumer locally
+  const consumer = await recvTransport.consume({
+    id: consumerInfo.id,
+    producerId: consumerInfo.producerId,
+    kind: consumerInfo.kind,
+    rtpParameters: consumerInfo.rtpParameters
+  });
+
+  // attach consumer's track to a video/audio element
+  let el;
+  if (consumer.kind === 'video') {
+    el = document.createElement('video');
+    el.playsInline = true;
+    el.autoplay = true;
+    el.style.width = '100%';
+    el.style.maxHeight = '320px';
+    el.srcObject = new MediaStream([consumer.track]);
+    remoteContainer.appendChild(el);
+  } else if (consumer.kind === 'audio') {
+    el = document.createElement('audio');
+    el.autoplay = true;
+    el.srcObject = new MediaStream([consumer.track]);
+    // keep audio element hidden
+    el.style.display = 'none';
+    remoteContainer.appendChild(el);
+  }
+
+  consumers.set(consumer.id, { consumer, el });
+  // acknowledge resume if needed
+  await emitRequest('consumer-resume', { consumerId: consumer.id });
+
+  console.log('consuming remote track', consumer.id);
+}
+
+/* -----------------------------
+   Signaling helpers (Socket.IO request/response)
+   -----------------------------
+   We'll use a request/response helper: emit event and wait for callback ack
+*/
+function emitRequest(method, payload = {}) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('signaling timeout ' + method)), 10000);
+    socket.timeout(10000).emit(method, payload, (err, data) => {
+      clearTimeout(timeout);
+      if (err) return reject(err);
+      resolve(data);
+    });
+  });
+}
+
+/* -----------------------------
+   Small convenience UI bindings for your preview page
+   -----------------------------
+*/
+document.addEventListener('DOMContentLoaded', () => {
+  // when the preview toggles to Host Mode, start producer
+  const hostToggle = document.getElementById('modeBtn');
+  if (hostToggle) {
+    hostToggle.addEventListener('click', async () => {
+      // allow preview's mode toggle to update text first (small delay)
+      setTimeout(async () => {
+        const nowHost = hostToggle.textContent.toLowerCase().includes('viewer') === false; // depends on text you used
+        // connect socket if needed
+        if (!socket.connected) connectSocket();
+        // load device early
+        await fetchIceServers(); // optional
+        if (nowHost) {
+          startProducer().catch(console.error);
+        } else {
+          // viewer mode: try to consume any announced producers
+          // ask server for available producers list
+          try {
+            const list = await emitRequest('getProducers', {});
+            if (Array.isArray(list.producers)) {
+              for (const p of list.producers) await consumeProducer(p.id, p.metadata).catch(console.warn);
+            }
+          } catch (e) { console.warn('getProducers failed', e); }
+        }
+      }, 200);
+    });
+  }
+});
+
+// expose some helper fns to console for dev
+window.__kingdm = { startProducer, consumeProducer, connectSocket, emitRequest };
+
+</script>
+
+</body>
+</html>
